@@ -14,6 +14,10 @@ typedef struct s_context
     char    **env;
     int     io[2];
     int     pipe_io[2];
+    int     pipe2_io[2];//bonus
+    int     order;//bonus
 }   t_context;
+
+void	clear_context(t_context *context);
 
 #endif
