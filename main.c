@@ -1,16 +1,18 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   main.c                                             :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: aleconst <marvin@42.fr>                    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/05/20 12:04:37 by aleconst          #+#    #+#             */
+/*   Updated: 2025/05/20 12:04:40 by aleconst         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "pipex.h"
 
-void	create_path(char **s1, char *s2)
-{
-	char	*new_string;
-
-	new_string = ft_strjoin(*s1, "/");
-	free(*s1);
-	*s1 = ft_strjoin(new_string, s2);
-	free(new_string);
-}
-
-void	use_cmd(char *cmd, char *paths)
+void	use_cmd(char *cmd, char *paths, t_context context)
 {
 	char	**path;
 	char	**args;
@@ -18,28 +20,18 @@ void	use_cmd(char *cmd, char *paths)
 
 	path = ft_split(paths, ':');
 	if (!path)
-	{
-		perror("Error");
-		exit(1);
-	}
+		stderror_manager(ERROR_MALLOC, 1, 1, context);
 	i = -1;
 	while (path[++i] != NULL)
 	{
 		args = ft_split(cmd, ' ');
 		if (!args)
-		{
-			ft_free_wa(path);
-			perror("Error");
-			exit(1);
-		}
+			return (ft_free_wa(path),
+				stderror_manager(ERROR_MALLOC, 1, 1, context));
 		create_path(&path[i], args[0]);
 		if (!path[i])
-		{
-			perror("Error");
-			ft_free_wa(args);
-			ft_free_wa(path);
-			exit(1);
-		}
+			return (ft_free_wa(args), ft_free_wa(path),
+				stderror_manager(ERROR_MALLOC, 1, 1, context));
 		if (access(path[i], X_OK) == 0)
 			execve(path[i], args, NULL);
 		ft_free_wa(args);
@@ -51,7 +43,7 @@ void	error_manager(int argc, char **argv)
 {
 	if (argc != 5)
 	{
-		write(2, "Cantidad de argumentos incorrecta\n", 34);
+		write(2, "Error: Cantidad de argumentos incorrecta\n", 34);
 		exit(1);
 	}
 	if (access(argv[1], F_OK | R_OK) == -1)
@@ -72,24 +64,27 @@ void	error_manager(int argc, char **argv)
 	1 = Permision denied
 	2 = Not found
 */
-int	external_cmd(char *cmd)
+int	external_cmd(char *cmd, t_context context)
 {
-	char **full_cmd;
+	char	**full_cmd;
 
 	full_cmd = ft_split(cmd, ' ');
 	if (!full_cmd)
 	{
-		perror("Error ");
-		exit(1);
+		stderror_manager(ERROR_MALLOC, 1, 1, context);
 	}
 	if (ft_strncmp(cmd, ".", 1) == 0 || ft_strncmp(cmd, "/", 1) == 0)
-	{	
+	{
 		if (access(full_cmd[0], X_OK) == 0)
 		{
 			execve(full_cmd[0], full_cmd, NULL);
-			perror("execve");
 			ft_free_wa(full_cmd);
-			exit(1);
+			stderror_manager("execve", 0, 1, context);
+		}
+		else if (access(full_cmd[0], F_OK) == 0)
+		{
+			ft_free_wa(full_cmd);
+			return (2);
 		}
 		ft_free_wa(full_cmd);
 		return (1);
@@ -110,60 +105,20 @@ pid_t	child_procces(char *cmd, t_context *context)
 		return (-1);
 	else if (child_pid == 0)
 	{
-		dup2(context->io[0], STDIN_FILENO);
-		dup2(context->pipe_io[1], STDOUT_FILENO);
-		close(context->io[0]);
-		close(context->io[1]);
-		close(context->pipe_io[0]);
-		close(context->pipe_io[1]);
-		has_error = external_cmd(cmd);
+		redirect_io(context);
+		has_error = external_cmd(cmd, *context);
 		while (context->env[++i] != NULL)
-		{
 			if (ft_strncmp("PATH=", context->env[i], 5) == 0)
-				use_cmd(cmd, context->env[i] + 5);
-		}
+				use_cmd(cmd, context->env[i] + 5, *context);
 		write(2, cmd, ft_strlen(cmd));
 		if (has_error == 1)
 			write(2, ": Permission denied\n", 20);
 		else
 			write(2, ": Command not found\n", 20);
+		unlink(context->out_name);
 		exit(1);
 	}
 	return (child_pid);
-}
-
-pid_t	child_procces2(char *cmd, t_context *context)
-{
-	pid_t		child_pid;
-	int			has_error;
-	int			i;
-
-	i = -1;
-	child_pid = fork();
-	if (child_pid == -1)
-		return (-1);
-	else if (child_pid == 0)
-	{
-		dup2(context->pipe_io[0], STDIN_FILENO);
-		dup2(context->io[1], STDOUT_FILENO);
-		close(context->io[0]);
-		close(context->io[1]);
-		close(context->pipe_io[0]);
-		close(context->pipe_io[1]);
-		has_error = external_cmd(cmd);
-		while (context->env[++i] != NULL)
-		{
-			if (ft_strncmp("PATH=", context->env[i], 5) == 0)
-				use_cmd(cmd, context->env[i] + 5);
-		}
-		write(2, cmd, ft_strlen(cmd));
-		if (has_error == 1)
-			write(2, ": Permission denied\n", 20);
-		else
-			write(2, ": Command not found\n", 20);
-		exit(1);
-	}
-	return (child_pid);	
 }
 
 int	main(int argc, char **argv, char **env)
@@ -174,16 +129,19 @@ int	main(int argc, char **argv, char **env)
 
 	error_manager(argc, argv);
 	context.io[0] = open(argv[1], O_RDONLY);
-	context.io[1] = open(argv[4], O_RDWR | O_TRUNC | O_CREAT, 0644);
+	context.io[1] = open(argv[argc - 1], O_RDWR | O_TRUNC | O_CREAT, 0644);
 	pipe(context.pipe_io);
 	context.env = env;
+	context.order = 2;
+	context.argc = argc;
+	context.out_name = argv[argc - 1];
 	child_pid = child_procces(argv[2], &context);
-	waitpid(child_pid, NULL, 0);
-	child_pid2 = child_procces2(argv[3], &context);
+	context.order += 1;
+	child_pid2 = child_procces(argv[3], &context);
 	close(context.io[0]);
 	close(context.io[1]);
 	close(context.pipe_io[0]);
 	close(context.pipe_io[1]);
-	waitpid(child_pid2, NULL, 0);
+	while (wait(NULL) > 0);
 	return (0);
 }
