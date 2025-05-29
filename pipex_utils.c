@@ -12,6 +12,45 @@
 
 #include "pipex.h"
 
+int	is_empty_cmd(const char *cmd)
+{
+	int	i;
+
+	if (!cmd)
+		return (1);
+	i = 0;
+	while (cmd[i])
+	{
+		if (cmd[i] != ' ' && cmd[i] != '\t' && cmd[i] != '\n' && cmd[i] != '\r'
+			&& cmd[i] != '\v' && cmd[i] != '\f')
+			return (0);
+		i++;
+	}
+	return (1);
+}
+
+int	get_last_status(pid_t last_pid)
+{
+	int		final_status;
+	int		status;
+	pid_t	pid;
+
+	pid = wait(&status);
+	final_status = 0;
+	while (pid > 0)
+	{
+		if (pid == last_pid)
+		{
+			if (WIFEXITED(status))
+				final_status = WEXITSTATUS(status);
+			else
+				final_status = 1;
+		}
+		pid = wait(&status);
+	}
+	return (final_status);
+}
+
 void	redirect_io(t_context *context)
 {
 	if (context->order == 2)
@@ -30,20 +69,19 @@ void	redirect_io(t_context *context)
 	close(context->pipe_io[1]);
 }
 
-void	stderror_manager(char *message, int has_prerror, int exit_mode,
-	t_context context)
+void	stderror_manager(char *message, int has_prerror, int exit_mode)
 {
 	if (!message)
 		return ;
-	if (!has_prerror)
+	if (has_prerror == 1)
 	{
 		write(2, message, ft_strlen(message));
+		write(2, "\n", 1);
 	}
 	else
 	{
 		perror(message);
 	}
-	unlink(context.out_name);
 	exit (exit_mode);
 }
 

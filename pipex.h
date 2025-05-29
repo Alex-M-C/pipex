@@ -29,16 +29,18 @@ typedef struct s_context
 	char	**env;
 	int		io[2];
 	int		order;
-	char	*out_name;
 	int		pipe_io[2];
 	int		pipe2_io[2];//bonus
 }	t_context;
 
-void	stderror_manager(char *message, int has_prerror, int exit_mode,
-			t_context context);
+void	stderror_manager(char *message, int has_prerror, int exit_mode);
 
 void	create_path(char **s1, char *s2);
 
 void	redirect_io(t_context *context);
+
+int		get_last_status(pid_t last_pid);
+
+int		is_empty_cmd(const char *cmd);
 
 #endif
