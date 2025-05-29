@@ -29,19 +29,22 @@ int	is_empty_cmd(const char *cmd)
 	return (1);
 }
 
-int	get_last_status(pid_t last_pid)
+int	get_last_status(pid_t last_pid, int argc, char **argv)
 {
 	int		final_status;
 	int		status;
 	pid_t	pid;
 
 	pid = wait(&status);
-	final_status = 0;
+	final_status = 1;
 	while (pid > 0)
 	{
 		if (pid == last_pid)
 		{
-			if (WIFEXITED(status))
+			if (access(argv[argc - 1], F_OK) == 0
+				&& access(argv[argc - 1], W_OK) == -1)
+				perror(argv[argc - 1]);
+			if (WIFEXITED(status) && access(argv[argc - 1], W_OK) == 0)
 				final_status = WEXITSTATUS(status);
 			else
 				final_status = 1;

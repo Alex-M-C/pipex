@@ -21,7 +21,7 @@ Error codes (erase)
 -No error: 0
 */
 
-void	use_cmd(char *cmd, char *paths)
+void	use_cmd(char *cmd, char *paths, char **env)
 {
 	char	**path;
 	char	**args;
@@ -42,14 +42,14 @@ void	use_cmd(char *cmd, char *paths)
 			return (ft_free_wa(args), ft_free_wa(path),
 				stderror_manager(ERROR_MALLOC, 1, 1));
 		if (access(path[i], X_OK) == 0)
-			return (execve(path[i], args, NULL), ft_free_wa(args),
+			return (execve(path[i], args, env), ft_free_wa(args),
 				stderror_manager("execve", 0, 1));
 		ft_free_wa(args);
 	}
 	ft_free_wa(path);
 }
 
-void	error_manager(int argc, char **argv, char **env)
+void	error_manager(int argc, char **argv, char **env, t_context *context)
 {
 	if (argc != 5)
 	{
@@ -61,14 +61,17 @@ void	error_manager(int argc, char **argv, char **env)
 		write(2, "Error: Missing environment\n", 27);
 		exit(1);
 	}
-	if (access(argv[1], F_OK | R_OK) == -1)
+	if (access(argv[1], F_OK) == -1)
+		perror(argv[1]);
+	else if (access(argv[1], R_OK) == -1)
 	{
 		perror(argv[1]);
+		context->io[0] = open("/dev/null", O_RDONLY);
+		if (context->io[0] == -1)
+			exit(1);
+		return ;
 	}
-	if (access(argv[argc - 1], F_OK) == 0 && access(argv[argc - 1], W_OK) == -1)
-	{
-		perror(argv[argc - 1]);
-	}
+	context->io[0] = open(argv[1], O_RDONLY);
 }
 
 /* 
@@ -76,7 +79,7 @@ void	error_manager(int argc, char **argv, char **env)
 	1 = Permision denied
 	2 = Not found
 */
-int	external_cmd(char *cmd)
+int	external_cmd(char *cmd, char **env)
 {
 	char	**full_cmd;
 
@@ -87,7 +90,7 @@ int	external_cmd(char *cmd)
 	{
 		if (access(full_cmd[0], X_OK) == 0)
 		{
-			execve(full_cmd[0], full_cmd, NULL);
+			execve(full_cmd[0], full_cmd, env);
 			ft_free_wa(full_cmd);
 			stderror_manager("execve", 0, 1);
 		}
@@ -118,18 +121,14 @@ pid_t	child_procces(char *cmd, t_context *context)
 		redirect_io(context);
 		if (is_empty_cmd(cmd) == 1)
 			return (127);
-		has_error = external_cmd(cmd);
+		has_error = external_cmd(cmd, context->env);
 		while (context->env[++i] != NULL)
 			if (ft_strncmp("PATH=", context->env[i], 5) == 0)
-				use_cmd(cmd, context->env[i] + 5);
+				use_cmd(cmd, context->env[i] + 5, context->env);
 		write(2, cmd, ft_strlen(cmd));
 		if (has_error == 1)
-		{
-			write(2, ": Permission denied\n", 20);
-			exit(126);
-		}
-		write(2, ": Command not found\n", 20);
-		exit(127);
+			stderror_manager(": Permission denied\n", 1, 126);
+		stderror_manager(": Command not found\n", 1, 127);
 	}
 	return (child_pid);
 }
@@ -139,8 +138,7 @@ int	main(int argc, char **argv, char **env)
 	t_context	context;
 	pid_t		last_pid;
 
-	error_manager(argc, argv, env);
-	context.io[0] = open(argv[1], O_RDONLY);
+	error_manager(argc, argv, env, &context);
 	context.io[1] = open(argv[argc - 1], O_RDWR | O_TRUNC | O_CREAT, 0644);
 	pipe(context.pipe_io);
 	context.env = env;
@@ -155,5 +153,5 @@ int	main(int argc, char **argv, char **env)
 	close(context.io[1]);
 	close(context.pipe_io[0]);
 	close(context.pipe_io[1]);
-	return (get_last_status(last_pid));
+	return (get_last_status(last_pid, argc, argv));
 }

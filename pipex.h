@@ -39,7 +39,7 @@ void	create_path(char **s1, char *s2);
 
 void	redirect_io(t_context *context);
 
-int		get_last_status(pid_t last_pid);
+int		get_last_status(pid_t last_pid, int argc, char **argv);
 
 int		is_empty_cmd(const char *cmd);
 
