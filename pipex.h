@@ -26,7 +26,9 @@
 typedef struct s_context
 {
 	int		argc;
+	char	**argv;
 	char	**env;
+	char	*path;
 	int		io[2];
 	int		order;
 	int		pipe_io[2];

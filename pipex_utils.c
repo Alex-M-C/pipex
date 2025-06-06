@@ -41,9 +41,6 @@ int	get_last_status(pid_t last_pid, int argc, char **argv)
 	{
 		if (pid == last_pid)
 		{
-			if (access(argv[argc - 1], F_OK) == 0
-				&& access(argv[argc - 1], W_OK) == -1)
-				perror(argv[argc - 1]);
 			if (WIFEXITED(status) && access(argv[argc - 1], W_OK) == 0)
 				final_status = WEXITSTATUS(status);
 			else
@@ -58,11 +55,15 @@ void	redirect_io(t_context *context)
 {
 	if (context->order == 2)
 	{
+		if (access(context->argv[1], F_OK | R_OK) == -1)
+			stderror_manager(context->argv[1], 0, 1);
 		dup2(context->io[0], STDIN_FILENO);
 		dup2(context->pipe_io[1], STDOUT_FILENO);
 	}
 	else if (context->order == context->argc - 2)
 	{
+		if (access(context->argv[context->argc - 1], W_OK) == -1)
+			stderror_manager(context->argv[context->argc - 1], 0, 1);
 		dup2(context->pipe_io[0], STDIN_FILENO);
 		dup2(context->io[1], STDOUT_FILENO);
 	}
@@ -74,8 +75,6 @@ void	redirect_io(t_context *context)
 
 void	stderror_manager(char *message, int has_prerror, int exit_mode)
 {
-	if (!message)
-		return ;
 	if (has_prerror == 1)
 	{
 		write(2, message, ft_strlen(message));
