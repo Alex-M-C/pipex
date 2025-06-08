@@ -10,8 +10,8 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#ifndef PIPEX_H
-# define PIPEX_H
+#ifndef PIPEX_BONUS_H
+# define PIPEX_BONUS_H
 # include <fcntl.h>
 # include <unistd.h>
 # include <stddef.h>
@@ -30,7 +30,9 @@ typedef struct s_context
 	char	**env;
 	int		io[2];
 	int		order;
+	int		cmd_order;
 	int		pipe_io[2];
+	int		pipe2_io[2];
 }	t_context;
 
 void	stderror_manager(char *message, int has_prerror, int exit_mode);
@@ -42,5 +44,13 @@ void	redirect_io(t_context *context);
 int		get_last_status(pid_t last_pid, int argc, char **argv);
 
 int		is_empty_cmd(const char *cmd);
+
+void	redirect_pipe(t_context *context);
+
+void	sync_pipes(t_context *context);
+
+int		here_doc(char *delimiter);
+
+void	close_all(t_context *context);
 
 #endif

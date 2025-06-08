@@ -10,7 +10,7 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "pipex.h"
+#include "pipex_bonus.h"
 
 void	use_cmd(char *cmd, char *paths, char **env)
 {
@@ -38,20 +38,6 @@ void	use_cmd(char *cmd, char *paths, char **env)
 		ft_free_wa(args);
 	}
 	ft_free_wa(path);
-}
-
-void	error_manager(int argc, char **env)
-{
-	if (argc != 5)
-	{
-		write(2, "Error: Wrong number of arguments\n", 33);
-		exit(1);
-	}
-	if (!env)
-	{
-		write(2, "Error: Missing environment\n", 27);
-		exit(1);
-	}
 }
 
 /* 
@@ -112,28 +98,43 @@ pid_t	child_procces(char *cmd, t_context *context)
 	return (child_pid);
 }
 
+void	io_manager(int argc, char **argv, t_context *context)
+{
+	if (ft_strncmp(argv[1], "here_doc", 8) == 0)
+	{
+		if (argc < 6)
+			stderror_manager("Error: At least 6 arguments are expected", 1, 1);
+		context->io[0] = here_doc(argv[2]);
+		context->io[1] = open(argv[argc - 1],
+				O_RDWR | O_APPEND | O_CREAT, 0644);
+		context->order = 2;
+		return ;
+	}
+	context->io[0] = open(argv[1], O_RDONLY);
+	context->io[1] = open(argv[argc - 1], O_RDWR | O_TRUNC | O_CREAT, 0644);
+	context->order = 1;
+}
+
 int	main(int argc, char **argv, char **env)
 {
 	t_context	context;
 	pid_t		last_pid;
 
-	error_manager(argc, env);
-	context.io[0] = open(argv[1], O_RDONLY);
-	context.io[1] = open(argv[argc - 1], O_RDWR | O_TRUNC | O_CREAT, 0644);
-	if (pipe(context.pipe_io) == -1)
-		stderror_manager("Error: Pipe failed", 1, 1);
+	if (argc < 5)
+		return (write(2, "Error: At least 5 arguments are expected\n", 41), 1);
+	io_manager(argc, argv, &context);
 	context.env = env;
-	context.order = 2;
 	context.argc = argc;
 	context.argv = argv;
-	while (context.order < argc - 1)
+	context.cmd_order = 0;
+	if (pipe(context.pipe_io) == -1 || pipe(context.pipe2_io) == -1)
+		stderror_manager("Error: Pipe failed", 1, 1);
+	while (++context.order < argc - 1)
 	{
+		sync_pipes(&context);
 		last_pid = child_procces(argv[context.order], &context);
-		context.order += 1;
+		context.cmd_order += 1;
 	}
-	close(context.io[0]);
-	close(context.io[1]);
-	close(context.pipe_io[0]);
-	close(context.pipe_io[1]);
+	close_all(&context);
 	return (get_last_status(last_pid, argc, argv));
 }
