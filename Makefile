@@ -1,62 +1,65 @@
-#Executable name
+# Executable name
 NAME = pipex
 
-#Compilator and flags
+# Compiler and flags
 CC = cc
 CFLAGS = -Wall -Wextra -Werror
 
-#Variables
-FILES = main.c pipex_utils.c
-OBJECTS = $(FILES:.c=.o)
-B_FILES = main_bonus.c pipex_utils_bonus.c pipex_extra_bonus.c
-B_OBJECTS = $(B_FILES:.c=.o)
-INPUT_FILE = infile
+# Sources per mode
+SRC_NORMAL = main.c pipex_utils.c pipex_extra.c
+OBJ_NORMAL = $(SRC_NORMAL:.c=.o)
 
-#Library path
+SRC_BONUS = main_bonus.c pipex_utils_bonus.c pipex_extra_bonus.c
+OBJ_BONUS = $(SRC_BONUS:.c=.o)
+
+# Library
 LIBDIR = ./libft
 LIBFT = $(LIBDIR)/libft.a
 
-#Bonus marker file
-BONUS_FLAG = .bonus
+# Mode marker files
+MARKER_NORMAL = .normal_build
+MARKER_BONUS = .bonus_build
 
-#Default rule: compile all
-all: $(LIBFT) $(NAME)
+# Default rule (normal build)
+all: $(NAME)
 
-#Rule to create the program (removes bonus flag if exists)
-$(NAME): $(OBJECTS) $(LIBFT)
-	@rm -f $(BONUS_FLAG)
-	$(CC) $(CFLAGS) $(OBJECTS) -L$(LIBDIR) -lft -o $(NAME)
+$(NAME): $(MARKER_NORMAL)
 
-#Rule to create the needed library
+# Bonus rule (independent)
+bonus: $(MARKER_BONUS)
+
+# Build normal mode
+$(MARKER_NORMAL): $(OBJ_NORMAL) $(LIBFT)
+	@rm -f $(OBJ_BONUS) $(MARKER_BONUS)
+	$(CC) $(CFLAGS) $(OBJ_NORMAL) -L$(LIBDIR) -lft -o $(NAME)
+	@touch $(MARKER_NORMAL)
+
+# Build bonus mode
+$(MARKER_BONUS): $(OBJ_BONUS) $(LIBFT)
+	@rm -f $(OBJ_NORMAL) $(MARKER_NORMAL)
+	$(CC) $(CFLAGS) $(OBJ_BONUS) -L$(LIBDIR) -lft -o $(NAME)
+	@touch $(MARKER_BONUS)
+
+# Compile libft
 $(LIBFT):
-	make -C $(LIBDIR) all
+	@$(MAKE) -C $(LIBDIR) all
 
-$(INPUT_FILE):
-	touch $(INPUT_FILE)
-
-#Auto compile .c into .o
+# Pattern rule for object files
 %.o: %.c pipex.h $(LIBDIR)/libft.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
-#Rule to clean all the created files
+# Clean object and mode markers
 clean:
-	$(MAKE) -C $(LIBDIR) clean
-	rm -f $(OBJECTS) $(B_OBJECTS)
+	@$(MAKE) -C $(LIBDIR) clean
+	rm -f $(OBJ_NORMAL) $(OBJ_BONUS)
+	rm -f $(MARKER_NORMAL) $(MARKER_BONUS)
 
-#Rule to clean all, including the library
+# Full clean
 fclean: clean
-	$(MAKE) -C $(LIBDIR) fclean
-	rm -f $(NAME) $(BONUS_FLAG)
+	@$(MAKE) -C $(LIBDIR) fclean
+	rm -f $(NAME)
 
-#Rule to recompile all
+# Rebuild everything
 re: fclean all
 
-#Bonus rule - only recompiles if needed
-bonus: $(LIBFT) $(BONUS_FLAG)
-
-$(BONUS_FLAG): $(B_OBJECTS) $(LIBFT)
-	$(CC) $(CFLAGS) $(B_OBJECTS) -L$(LIBDIR) -lft -o $(NAME)
-	@touch $(BONUS_FLAG)
-
-#Indicates that the next rules are not files
 .PHONY: all clean fclean re bonus

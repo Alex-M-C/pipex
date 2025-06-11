@@ -12,7 +12,7 @@
 
 #include "pipex.h"
 
-void	use_cmd(char *cmd, char *paths, char **env)
+static void	use_cmd(char *cmd, char *paths, char **env)
 {
 	char	**path;
 	char	**args;
@@ -40,7 +40,7 @@ void	use_cmd(char *cmd, char *paths, char **env)
 	ft_free_wa(path);
 }
 
-void	error_manager(int argc, char **env)
+static void	error_manager(int argc, char **env)
 {
 	if (argc != 5)
 	{
@@ -59,7 +59,7 @@ void	error_manager(int argc, char **env)
 	1 = Permision denied
 	2 = Not found
 */
-int	external_cmd(char *cmd, char **env)
+static int	external_cmd(char *cmd, char **env)
 {
 	char	**full_cmd;
 
@@ -84,7 +84,7 @@ int	external_cmd(char *cmd, char **env)
 	return (2);
 }
 
-pid_t	child_procces(char *cmd, t_context *context)
+static pid_t	child_procces(char *cmd, t_context *context)
 {
 	pid_t		child_pid;
 	int			has_error;
@@ -101,13 +101,10 @@ pid_t	child_procces(char *cmd, t_context *context)
 			return (write(2, cmd, ft_strlen(cmd)),
 				stderror_manager(": Command not found", 1, 127), 0);
 		has_error = external_cmd(cmd, context->env);
-		while (context->env[++i] != NULL)
+		while (context->env[++i] != NULL && !ft_strchr(cmd, '/'))
 			if (ft_strncmp("PATH=", context->env[i], 5) == 0)
 				use_cmd(cmd, context->env[i] + 5, context->env);
-		write(2, cmd, ft_strlen(cmd));
-		if (has_error == 1)
-			stderror_manager(": Permission denied", 1, 126);
-		stderror_manager(": Command not found", 1, 127);
+		error_str(has_error, cmd);
 	}
 	return (child_pid);
 }

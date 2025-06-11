@@ -45,6 +45,8 @@ int		get_last_status(pid_t last_pid, int argc, char **argv);
 
 int		is_empty_cmd(const char *cmd);
 
+void	error_str(int has_error, char *cmd);
+
 void	redirect_pipe(t_context *context);
 
 void	sync_pipes(t_context *context);
