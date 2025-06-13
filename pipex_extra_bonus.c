@@ -76,28 +76,27 @@ void	sync_pipes(t_context *context)
 int	here_doc(char *delimiter)
 {
 	int		pipe_fd[2];
+	int		n_line;
 	char	*line;
 
 	if (pipe(pipe_fd) == -1)
 		return (-1);
+	n_line = 1;
 	ft_printf("> ");
 	line = get_next_line(STDIN_FILENO);
-	while (line)
-	{
-		if (ft_strncmp(line, delimiter, ft_strlen(delimiter)) == 0
+	while (line && !(ft_strncmp(line, delimiter, ft_strlen(delimiter)) == 0
 			&& ((ft_strlen(line) == ft_strlen(delimiter)
 					&& line[ft_strlen(line) - 1] != '\n')
 				|| (ft_strlen(line) - 1 == ft_strlen(delimiter)
-					&& line[ft_strlen(line) - 1] == '\n')))
-		{
-			free(line);
-			break ;
-		}
+					&& line[ft_strlen(line) - 1] == '\n'))))
+	{
 		write(pipe_fd[1], line, ft_strlen(line));
 		free(line);
+		n_line++;
 		ft_printf("> ");
 		line = get_next_line(STDIN_FILENO);
 	}
+	manage_line(delimiter, line, n_line);
 	close(pipe_fd[1]);
 	return (pipe_fd[0]);
 }

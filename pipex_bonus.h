@@ -55,4 +55,6 @@ int		here_doc(char *delimiter);
 
 void	close_all(t_context *context);
 
+void	manage_line(char *delimiter, char *line, int n_line);
+
 #endif

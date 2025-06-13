@@ -101,7 +101,8 @@ static pid_t	child_procces(char *cmd, t_context *context)
 			return (write(2, cmd, ft_strlen(cmd)),
 				stderror_manager(": Command not found", 1, 127), 0);
 		has_error = external_cmd(cmd, context->env);
-		while (context->env[++i] != NULL && !ft_strchr(cmd, '/'))
+		while (context->env[++i] != NULL && !(ft_strncmp(cmd, ".", 1) == 0
+				|| ft_strncmp(cmd, "/", 1) == 0))
 			if (ft_strncmp("PATH=", context->env[i], 5) == 0)
 				use_cmd(cmd, context->env[i] + 5, context->env);
 		error_str(has_error, cmd);

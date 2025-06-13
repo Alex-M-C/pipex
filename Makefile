@@ -3,13 +3,13 @@ NAME = pipex
 
 # Compiler and flags
 CC = cc
-CFLAGS = -Wall -Wextra -Werror
+CFLAGS = -Wall -Wextra -Werror -g
 
 # Sources per mode
 SRC_NORMAL = main.c pipex_utils.c pipex_extra.c
 OBJ_NORMAL = $(SRC_NORMAL:.c=.o)
 
-SRC_BONUS = main_bonus.c pipex_utils_bonus.c pipex_extra_bonus.c
+SRC_BONUS = main_bonus.c pipex_utils_bonus.c pipex_extra_bonus.c pipex_heredoc_bonus.c
 OBJ_BONUS = $(SRC_BONUS:.c=.o)
 
 # Library
